@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FDP Calculator — CAR 604 &amp; 704</title>
+  <meta name="description" content="Flight Duty Period calculator for Canadian Aviation Regulations 604 and 704. Calculate maximum FDP and required rest periods.">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#185FA5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="FDP Calc">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #ffffff;
+      --bg2: #f5f5f3;
+      --bg3: #eeecea;
+      --text: #1a1a18;
+      --text2: #6b6b68;
+      --text3: #9b9b97;
+      --border: rgba(0,0,0,0.12);
+      --border2: rgba(0,0,0,0.22);
+      --info-bg: #e6f1fb;
+      --info-text: #185FA5;
+      --info-border: rgba(24,95,165,0.25);
+      --success-bg: #eaf3de;
+      --success-text: #3B6D11;
+      --success-border: rgba(59,109,17,0.25);
+      --radius-md: 8px;
+      --radius-lg: 12px;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1e1e1c;
+        --bg2: #2a2a28;
+        --bg3: #333330;
+        --text: #f0ede8;
+        --text2: #a0a09a;
+        --text3: #6e6e68;
+        --border: rgba(255,255,255,0.1);
+        --border2: rgba(255,255,255,0.2);
+        --info-bg: #0c447c;
+        --info-text: #b5d4f4;
+        --info-border: rgba(181,212,244,0.2);
+        --success-bg: #27500a;
+        --success-text: #c0dd97;
+        --success-border: rgba(192,221,151,0.2);
+      }
+    }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.5; }
+    .wrap { max-width: 680px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+    h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+    .subtitle { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; }
+    .reg-toggle { display: inline-flex; border: 0.5px solid var(--border2); border-radius: var(--radius-md); overflow: hidden; margin-bottom: 1.5rem; }
+    .reg-toggle button { padding: 6px 20px; font-size: 13px; font-weight: 500; background: transparent; border: none; cursor: pointer; color: var(--text2); transition: all .15s; }
+    .reg-toggle button.active { background: var(--info-bg); color: var(--info-text); }
+    .tabs { display: flex; border-bottom: 0.5px solid var(--border); margin-bottom: 1.5rem; }
+    .tab { padding: 8px 16px; font-size: 14px; background: transparent; border: none; border-bottom: 2px solid transparent; cursor: pointer; color: var(--text2); font-weight: 400; transition: all .15s; }
+    .tab.active { color: var(--text); border-bottom-color: var(--text); font-weight: 500; }
+    .section { display: none; } .section.active { display: block; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    @media (max-width: 480px) { .grid2 { grid-template-columns: 1fr; } }
+    .field { margin-bottom: 12px; }
+    label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 4px; font-weight: 500; letter-spacing: .02em; text-transform: uppercase; }
+    input[type=time], input[type=number], select {
+      width: 100%; padding: 8px 10px; font-size: 14px; border: 0.5px solid var(--border2);
+      border-radius: var(--radius-md); background: var(--bg); color: var(--text);
+      appearance: auto; -webkit-appearance: auto;
+    }
+    input:focus, select:focus { outline: 2px solid var(--info-text); outline-offset: 1px; }
+    .check-row { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: 14px; cursor: pointer; }
+    .check-row input { width: auto; accent-color: var(--info-text); }
+    .sub-block { margin-left: 20px; padding: 12px; background: var(--bg2); border-radius: var(--radius-md); border: 0.5px solid var(--border); margin-bottom: 12px; }
+    .info-box { background: var(--info-bg); border: 0.5px solid var(--info-border); border-radius: var(--radius-md); padding: 12px 14px; font-size: 13px; color: var(--info-text); margin-bottom: 1rem; }
+    .info-box ul { padding-left: 16px; margin-top: 4px; line-height: 1.7; }
+    .btn-row { display: flex; gap: 8px; margin-top: 1rem; flex-wrap: wrap; }
+    .btn-primary { padding: 9px 22px; background: var(--info-bg); color: var(--info-text); border: 0.5px solid var(--info-border); border-radius: var(--radius-md); font-size: 14px; font-weight: 500; cursor: pointer; }
+    .btn-ghost { padding: 9px 22px; background: transparent; color: var(--text2); border: 0.5px solid var(--border2); border-radius: var(--radius-md); font-size: 14px; cursor: pointer; }
+    .result-card { margin-top: 1.5rem; background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 1.25rem; display: none; }
+    .result-card.show { display: block; }
+    .result-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--success-bg); color: var(--success-text); border: 0.5px solid var(--success-border); border-radius: var(--radius-md); padding: 7px 14px; font-size: 15px; font-weight: 500; margin-bottom: 1rem; }
+    .result-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; margin-top: 1rem; }
+    .metric { background: var(--bg2); border-radius: var(--radius-md); padding: 10px 12px; }
+    .metric-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
+    .metric-value { font-size: 15px; font-weight: 500; }
+    .bar-wrap { margin: 0.75rem 0 1rem; }
+    .bar-track { height: 10px; background: var(--bg3); border-radius: 4px; overflow: hidden; display: flex; }
+    .bar-base { height: 100%; background: #378ADD; transition: width .3s; }
+    .bar-ext { height: 100%; background: #1D9E75; transition: width .3s; }
+    .bar-labels { display: flex; justify-content: space-between; font-size: 11px; color: var(--text3); margin-top: 4px; }
+    .bar-legend { display: flex; gap: 12px; font-size: 12px; margin-top: 6px; color: var(--text2); }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; vertical-align: middle; }
+    .notes-section { margin-top: 1.5rem; padding: 1rem; background: var(--bg2); border-radius: var(--radius-md); font-size: 12px; color: var(--text2); line-height: 1.7; }
+    .notes-section strong { color: var(--text); font-weight: 500; }
+    .install-banner { display: none; align-items: center; justify-content: space-between; gap: 12px; background: var(--info-bg); border: 0.5px solid var(--info-border); border-radius: var(--radius-md); padding: 10px 14px; margin-bottom: 1rem; font-size: 13px; color: var(--info-text); }
+    .install-banner button { padding: 5px 14px; background: var(--info-text); color: var(--bg); border: none; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; cursor: pointer; white-space: nowrap; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div id="install-banner" class="install-banner">
+    <span>Install this app for offline use</span>
+    <button onclick="installApp()">Install</button>
+  </div>
+
+  <h1>Flight duty period calculator</h1>
+  <p class="subtitle">CAR 604 &amp; CAR 704 — Canada Aviation Regulations</p>
+
+  <div class="reg-toggle">
+    <button id="btn704" class="active" onclick="setReg('704')">CAR 704</button>
+    <button id="btn604" onclick="setReg('604')">CAR 604</button>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="setTab('fdp',this)">FDP calculator</button>
+    <button class="tab" onclick="setTab('rest',this)">Rest calculator</button>
+  </div>
+
+  <!-- FDP TAB -->
+  <div id="sec-fdp" class="section active">
+    <label class="check-row"><input type="checkbox" id="augmented" onchange="toggleAugmented()"> Augmented flight crew</label>
+
+    <div id="aug-block" style="display:none">
+      <div class="grid2">
+        <div class="field"><label>Additional FCMs</label>
+          <select id="aug-fcm">
+            <option value="">Select</option>
+            <option value="one">One additional FCM</option>
+            <option value="two" id="aug-two">Two additional FCMs</option>
+          </select>
+        </div>
+        <div class="field"><label>Rest facility</label>
+          <select id="aug-rest">
+            <option value="">Select</option>
+            <option value="class1" class="car704-opt">Class 1</option>
+            <option value="class2" class="car704-opt">Class 2</option>
+            <option value="class3" class="car704-opt">Class 3</option>
+            <option value="seat" class="car604-opt" style="display:none">Seat (17h max)</option>
+            <option value="bunk" class="car604-opt" style="display:none">Bunk (20h max)</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div id="car704-fields">
+      <div class="grid2">
+        <div class="field"><label>Acclimatization</label>
+          <select id="accl" onchange="toggleAccl()">
+            <option value="yes">Acclimatized to local time</option>
+            <option value="no">Not acclimatized</option>
+          </select>
+        </div>
+        <div class="field"><label>Duty start time (local)</label>
+          <input type="time" id="start-time">
+        </div>
+      </div>
+      <div id="accl-block" style="display:none">
+        <div class="sub-block">
+          <div class="grid2">
+            <div class="field"><label>Home base time at duty start</label><input type="time" id="ref-time"></div>
+            <div class="field"><label>Days away from home base</label><input type="number" id="days-away" min="0" placeholder="0"></div>
+          </div>
+          <div class="field"><label>Time zone difference</label>
+            <select id="tz-dir">
+              <option value="none">Less than 4 hours</option>
+              <option value="more4h">4 hours or more</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Number of flights</label><input type="number" id="num-flights" min="1" placeholder="e.g. 2"></div>
+        <div class="field"><label>Average flight duration</label>
+          <select id="flight-dur">
+            <option value="">Select</option>
+            <option value="less30">Less than 30 min</option>
+            <option value="30to50">30 – 50 min</option>
+            <option value="more50">More than 50 min</option>
+          </select>
+        </div>
+      </div>
+      <label class="check-row"><input type="checkbox" id="split704" onchange="toggleSplit704()"> Split duty</label>
+      <div id="split704-block" style="display:none">
+        <div class="sub-block">
+          <div class="grid2">
+            <div class="field"><label>Break duration (hours)</label><input type="number" id="split-hrs" step="0.5" min="1" placeholder="e.g. 2"></div>
+            <div class="field"><label>Break start time (local)</label><input type="time" id="split-time"></div>
+          </div>
+          <p style="font-size:12px;color:var(--text2)">Night break 00:00–05:59 counts 100%; day break counts 50%</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="car604-fields" style="display:none">
+      <div class="info-box">
+        <strong>15-hour FDP qualification (CAR 604.99(1)(b))</strong>
+        <ul>
+          <li>Total duty in the previous 30 days &le; 70 hours, OR</li>
+          <li>Rest period before this flight &ge; 24 hours</li>
+        </ul>
+      </div>
+      <div class="field"><label>Do you qualify for 15-hour FDP?</label>
+        <select id="qual15">
+          <option value="">Select</option>
+          <option value="yes">Yes — I qualify for 15 hours</option>
+          <option value="no">No — standard 14 hours</option>
+        </select>
+      </div>
+      <label class="check-row"><input type="checkbox" id="split604" onchange="toggleSplit604()"> Split duty</label>
+      <div id="split604-block" style="display:none">
+        <div class="sub-block">
+          <div class="field"><label>Rest period duration (hours, minimum 4)</label><input type="number" id="split604-hrs" step="0.5" min="4" placeholder="e.g. 5"></div>
+          <p style="font-size:12px;color:var(--text2)">Extension = half of rest period, max 4 hours (CAR 604.100)</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn-primary" onclick="calcFDP()">Calculate FDP</button>
+      <button class="btn-ghost" onclick="resetAll()">Reset</button>
+    </div>
+
+    <div class="result-card" id="fdp-result">
+      <div class="result-badge">&#10003; <span id="fdp-total"></span></div>
+      <div class="bar-wrap">
+        <div class="bar-track"><div class="bar-base" id="bar-base" style="width:0%"></div><div class="bar-ext" id="bar-ext" style="width:0%"></div></div>
+        <div class="bar-labels"><span>0h</span><span>18h max</span></div>
+        <div class="bar-legend">
+          <span><span class="legend-dot" style="background:#378ADD"></span>Standard FDP</span>
+          <span id="ext-legend" style="display:none"><span class="legend-dot" style="background:#1D9E75"></span>Split duty extension</span>
+        </div>
+      </div>
+      <div class="result-grid" id="fdp-metrics"></div>
+    </div>
+  </div>
+
+  <!-- REST TAB -->
+  <div id="sec-rest" class="section">
+    <div class="grid2">
+      <div class="field"><label>End location</label>
+        <select id="rest-loc" onchange="toggleRestOpts()">
+          <option value="home">Home base</option>
+          <option value="away">Away from home base</option>
+        </select>
+      </div>
+      <div class="field"><label>Time zone change</label>
+        <select id="rest-tz" onchange="toggleRestOpts()">
+          <option value="0">Less than 4 hours</option>
+          <option value="4">4 hours</option>
+          <option value="5">More than 4, up to 10 hours</option>
+          <option value="11">More than 10 hours</option>
+        </select>
+      </div>
+    </div>
+    <div id="rest-away-block" style="display:none">
+      <div class="grid2">
+        <div class="field"><label>Time away from home base</label>
+          <select id="time-away">
+            <option value="">Select</option>
+            <option value="less36">36 hours or less</option>
+            <option value="more36">More than 36 hours</option>
+            <option value="less60">60 hours or less</option>
+            <option value="more60">More than 60 hours</option>
+          </select>
+        </div>
+        <div id="wocl-block" style="display:none" class="field"><label>WOCL infringement</label>
+          <select id="wocl"><option value="no">No</option><option value="yes">Yes</option></select>
+        </div>
+      </div>
+    </div>
+    <label class="check-row"><input type="checkbox" id="ext-duty" onchange="toggleExtDuty()"> Extended duty</label>
+    <div id="ext-duty-block" style="display:none">
+      <div class="sub-block"><div class="field"><label>Hours beyond maximum FDP</label><input type="number" id="ext-hrs" step="0.5" min="0" placeholder="e.g. 1.5"></div></div>
+    </div>
+    <label class="check-row"><input type="checkbox" id="split-rest" onchange="toggleSplitRest()"> Split duty</label>
+    <div id="split-rest-block" style="display:none">
+      <div class="sub-block">
+        <div class="grid2">
+          <div class="field"><label>Break duration (hours)</label><input type="number" id="rest-split-hrs" step="0.5" min="0" placeholder="e.g. 2"></div>
+          <div class="field"><label>Break start time</label><input type="time" id="rest-split-time"></div>
+        </div>
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn-primary" onclick="calcRest()">Calculate rest</button>
+      <button class="btn-ghost" onclick="resetAll()">Reset</button>
+    </div>
+    <div class="result-card" id="rest-result">
+      <div class="result-badge">&#10003; <span id="rest-total"></span></div>
+      <div class="bar-wrap">
+        <div class="bar-track"><div class="bar-base" id="rest-bar-base" style="width:0%;background:#378ADD"></div><div class="bar-ext" id="rest-bar-ext" style="width:0%;background:#1D9E75"></div></div>
+        <div class="bar-labels"><span>0h</span><span>24h</span></div>
+      </div>
+      <div class="result-grid" id="rest-metrics"></div>
+    </div>
+  </div>
+
+  <div class="notes-section">
+    <strong>Notes:</strong> WOCL = 02:00–05:59 local time. Local night's rest must include 22:30–07:30. This tool is for reference only — always verify against the actual regulations and your company operations manual.
+  </div>
+</div>
+
+<script>
+let reg = '704';
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredInstallPrompt = e;
+  document.getElementById('install-banner').style.display = 'flex';
+});
+function installApp() {
+  if (deferredInstallPrompt) {
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.then(() => {
+      document.getElementById('install-banner').style.display = 'none';
+    });
+  }
+}
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('service-worker.js');
+}
+
+function setReg(r) {
+  reg = r;
+  document.getElementById('btn704').classList.toggle('active', r === '704');
+  document.getElementById('btn604').classList.toggle('active', r === '604');
+  document.getElementById('car704-fields').style.display = r === '704' ? 'block' : 'none';
+  document.getElementById('car604-fields').style.display = r === '604' ? 'block' : 'none';
+  document.querySelectorAll('.car704-opt').forEach(el => el.style.display = r === '704' ? '' : 'none');
+  document.querySelectorAll('.car604-opt').forEach(el => el.style.display = r === '604' ? '' : 'none');
+  document.getElementById('aug-two').style.display = r === '704' ? '' : 'none';
+  document.getElementById('aug-rest').value = '';
+  hideResults();
+}
+function setTab(t, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + t).classList.add('active');
+  btn.classList.add('active');
+}
+function toggleAugmented() {
+  const on = document.getElementById('augmented').checked;
+  document.getElementById('aug-block').style.display = on ? 'block' : 'none';
+  document.getElementById('car704-fields').style.display = (!on && reg === '704') ? 'block' : 'none';
+  document.getElementById('car604-fields').style.display = (!on && reg === '604') ? 'block' : 'none';
+}
+function toggleAccl() { document.getElementById('accl-block').style.display = document.getElementById('accl').value === 'no' ? 'block' : 'none'; }
+function toggleSplit704() { document.getElementById('split704-block').style.display = document.getElementById('split704').checked ? 'block' : 'none'; }
+function toggleSplit604() { document.getElementById('split604-block').style.display = document.getElementById('split604').checked ? 'block' : 'none'; }
+function toggleExtDuty() { document.getElementById('ext-duty-block').style.display = document.getElementById('ext-duty').checked ? 'block' : 'none'; }
+function toggleSplitRest() { document.getElementById('split-rest-block').style.display = document.getElementById('split-rest').checked ? 'block' : 'none'; }
+function toggleRestOpts() {
+  const loc = document.getElementById('rest-loc').value;
+  const tz = parseInt(document.getElementById('rest-tz').value);
+  document.getElementById('rest-away-block').style.display = (loc === 'home' && tz >= 4) ? 'block' : 'none';
+  document.getElementById('wocl-block').style.display = (loc === 'home' && tz > 4) ? 'block' : 'none';
+}
+function hideResults() {
+  document.getElementById('fdp-result').classList.remove('show');
+  document.getElementById('rest-result').classList.remove('show');
+}
+function resetAll() {
+  document.querySelectorAll('input[type=time], input[type=number]').forEach(el => el.value = '');
+  document.querySelectorAll('select').forEach(el => el.selectedIndex = 0);
+  document.querySelectorAll('input[type=checkbox]').forEach(el => el.checked = false);
+  ['aug-block','accl-block','split704-block','split604-block','ext-duty-block','split-rest-block','rest-away-block'].forEach(id => document.getElementById(id).style.display = 'none');
+  document.getElementById('car704-fields').style.display = reg === '704' ? 'block' : 'none';
+  document.getElementById('car604-fields').style.display = reg === '604' ? 'block' : 'none';
+  hideResults();
+}
+function showMetrics(id, metrics) {
+  document.getElementById(id).innerHTML = metrics.map(m =>
+    '<div class="metric"><div class="metric-label">' + m.label + '</div><div class="metric-value">' + m.value + '</div></div>'
+  ).join('');
+}
+function parseTime(s) { const p = s.split(':').map(Number); return p[0] + p[1] / 60; }
+
+const FDP_TABLE = {
+  r0:[9,9,9], r4:[10,9,9], r5:[11,10,9], r6:[12,11,10],
+  r7:[13,12,11], r13:[12.5,11.5,10.5], r17:[12,11,10], r22:[11,10,9], r23:[10,9,9]
+};
+function getRow(d) {
+  if (d < 4) return 'r0'; if (d < 5) return 'r4'; if (d < 6) return 'r5';
+  if (d < 7) return 'r6'; if (d < 13) return 'r7'; if (d < 17) return 'r13';
+  if (d < 22) return 'r17'; if (d < 23) return 'r22'; return 'r23';
+}
+
+function calcFDP() {
+  const aug = document.getElementById('augmented').checked;
+  let result;
+  if (aug) {
+    const fcm = document.getElementById('aug-fcm').value;
+    const rf = document.getElementById('aug-rest').value;
+    if (!fcm || !rf) return alert('Please select augmented crew options.');
+    if (reg === '704') {
+      const map = {one_class3:14, one_class2:15, one_class1:15, two_class3:15.25, two_class2:16.5, two_class1:18};
+      const fdp = map[fcm + '_' + rf];
+      if (!fdp) return alert('Invalid combination.');
+      result = {total:fdp, standard:fdp, ext:0, metrics:[{label:'Regulation',value:'CAR 704'},{label:'Additional FCMs',value:fcm==='one'?'1':'2'},{label:'Rest facility',value:'Class '+rf.replace('class','')},{label:'Max FDP',value:fdp+'h'}]};
+    } else {
+      const m = {seat:17, bunk:20};
+      const fdp = m[rf];
+      result = {total:fdp, standard:fdp, ext:0, metrics:[{label:'Regulation',value:'CAR 604'},{label:'Facility',value:rf==='seat'?'Seat':'Bunk'},{label:'Max FDP',value:fdp+'h'},{label:'Max flight deck duty',value:rf==='seat'?'12h':'14h'}]};
+    }
+  } else if (reg === '604') {
+    const q = document.getElementById('qual15').value;
+    if (!q) return alert('Please select FDP qualification status.');
+    const base = q === 'yes' ? 15 : 14;
+    let ext = 0;
+    if (document.getElementById('split604').checked) {
+      const hrs = parseFloat(document.getElementById('split604-hrs').value);
+      if (!hrs || hrs < 4) return alert('Split duty rest must be at least 4 hours.');
+      ext = Math.min(hrs / 2, 4);
+    }
+    const total = base + ext;
+    result = {total, standard:base, ext, metrics:[
+      {label:'Regulation',value:'CAR 604'},{label:'Rule',value:q==='yes'?'604.99(1)(b)':'604.99(1)(a)'},
+      {label:'Base FDP',value:base+'h'},{label:'Total FDP',value:total.toFixed(1)+'h'},
+      ...(ext > 0 ? [{label:'Split duty ext.',value:'+'+ext.toFixed(1)+'h'}] : [])
+    ]};
+  } else {
+    const startStr = document.getElementById('start-time').value;
+    const nf = parseInt(document.getElementById('num-flights').value);
+    const dur = document.getElementById('flight-dur').value;
+    if (!startStr || !nf || !dur) return alert('Please fill in all required fields.');
+    const accl = document.getElementById('accl').value === 'yes';
+    let timeForTable = parseTime(startStr);
+    if (!accl) {
+      const refStr = document.getElementById('ref-time').value;
+      const daysAway = parseInt(document.getElementById('days-away').value) || 0;
+      const tzDiff = document.getElementById('tz-dir').value === 'more4h' ? 5 : 3;
+      const tzAcc = Math.min(Math.floor(daysAway), tzDiff);
+      if (tzAcc < tzDiff && refStr) timeForTable = parseTime(refStr);
+    }
+    let col;
+    if (dur === 'less30') col = nf <= 11 ? 0 : nf <= 17 ? 1 : 2;
+    else if (dur === '30to50') col = nf <= 7 ? 0 : nf <= 11 ? 1 : 2;
+    else col = nf <= 4 ? 0 : nf <= 6 ? 1 : 2;
+    const row = getRow(timeForTable);
+    const base = FDP_TABLE[row][col];
+    let ext = 0;
+    if (document.getElementById('split704').checked) {
+      const bh = parseFloat(document.getElementById('split-hrs').value) || 0;
+      const bt = document.getElementById('split-time').value;
+      if (bh < 1) return alert('Split duty break must be at least 1 hour.');
+      if (!bt) return alert('Please enter break start time.');
+      const bHour = parseInt(bt.split(':')[0]);
+      const adj = bh - 0.75;
+      ext = adj > 0 ? (bHour < 6 ? adj : adj * 0.5) : 0;
+    }
+    const total = Math.min(base + ext, 18);
+    result = {total, standard:base, ext, metrics:[
+      {label:'Regulation',value:'CAR 704'},{label:'Acclimatized',value:accl?'Yes':'No'},
+      {label:'Base FDP',value:base+'h'},{label:'Total FDP',value:total.toFixed(1)+'h'},
+      ...(ext > 0 ? [{label:'Split duty ext.',value:'+'+ext.toFixed(1)+'h'}] : [])
+    ]};
+  }
+  document.getElementById('fdp-total').textContent = 'Maximum FDP: ' + result.total.toFixed(1) + ' hours';
+  showMetrics('fdp-metrics', result.metrics);
+  const maxBar = reg === '604' && aug ? 20 : 18;
+  document.getElementById('bar-base').style.width = Math.min((result.standard / maxBar) * 100, 100) + '%';
+  document.getElementById('bar-ext').style.width = Math.min((result.ext / maxBar) * 100, 100) + '%';
+  document.getElementById('ext-legend').style.display = result.ext > 0 ? 'inline' : 'none';
+  document.getElementById('fdp-result').classList.add('show');
+}
+
+function calcRest() {
+  const loc = document.getElementById('rest-loc').value;
+  const tz = parseInt(document.getElementById('rest-tz').value);
+  let base = loc === 'home' ? (tz === 4 && document.getElementById('time-away').value === 'more36' ? 13 : 12) : (tz >= 5 ? 14 : tz === 4 ? 11 : 10);
+  let add = 0;
+  if (document.getElementById('ext-duty').checked) {
+    const eh = parseFloat(document.getElementById('ext-hrs').value) || 0;
+    if (eh > 1) add += eh;
+  }
+  if (document.getElementById('split-rest').checked) {
+    const bh = parseFloat(document.getElementById('rest-split-hrs').value) || 0;
+    const bt = document.getElementById('rest-split-time').value;
+    if (bh > 0 && bt) {
+      const bHour = parseInt(bt.split(':')[0]);
+      const adj = bh - 0.75;
+      if (adj > 0) add += (bHour < 6 ? adj : adj * 0.5);
+    }
+  }
+  const total = base + add;
+  const localNights = (loc === 'home' && tz > 4) ? (tz > 10 ? 2 : document.getElementById('wocl').value === 'yes' ? 2 : 1) : 0;
+  const summary = localNights > 0 ? localNights + ' local night' + (localNights > 1 ? 's' : '') + ' rest required' : total.toFixed(1) + ' hours';
+  document.getElementById('rest-total').textContent = 'Required rest: ' + summary;
+  showMetrics('rest-metrics', [
+    {label:'Location',value:loc==='home'?'Home base':'Away'},
+    {label:'Timezone change',value:tz===0?'&lt;4h':tz===4?'4h':tz===5?'4–10h':'&gt;10h'},
+    {label:'Base rest',value:base+'h'},
+    ...(add > 0 ? [{label:'Additional rest',value:'+'+add.toFixed(1)+'h'}] : []),
+    ...(localNights > 0 ? [{label:'Local nights',value:localNights}] : []),
+    {label:'Total required',value:total.toFixed(1)+'h'}
+  ]);
+  document.getElementById('rest-bar-base').style.width = Math.min((base / 24) * 100, 100) + '%';
+  document.getElementById('rest-bar-ext').style.width = Math.min((add / 24) * 100, 100) + '%';
+  document.getElementById('rest-result').classList.add('show');
+}
+</script>
+</body>
+</html>
